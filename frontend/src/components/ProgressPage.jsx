@@ -97,7 +97,9 @@ export default function ProgressPage() {
         const res = await fetch(`/api/jobs/${jobId}`);
         if (!res.ok) {
           setStatus('error');
-          setErrorMessage('Job not found or expired.');
+          setErrorMessage(
+            'The server restarted during the crawl (common on small Render plans when memory runs out). Start a new crawl; try a smaller site, set CRAWL_CONCURRENCY=1, or use a Starter 1GB+ instance.',
+          );
           setActive(false);
           finishedRef.current = true;
           return;

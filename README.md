@@ -83,8 +83,8 @@ Render injects `PORT` automatically — do **not** set it yourself.
 | Key | Value | Required |
 |-----|--------|----------|
 | `PLAYWRIGHT_BROWSERS_PATH` | `0` | **Yes** (bundles Chromium into the app so runtime can find it) |
+| `CRAWL_CONCURRENCY` | `1` | **Recommended on Render** (default when `RENDER` is set) |
 | `NODE_ENV` | `production` | Optional |
-| `CRAWL_CONCURRENCY` | `2` (default on Render) or `1` if crawls still drop | Optional |
 
 ### After deploy
 
@@ -93,5 +93,6 @@ Open the service URL Render gives you (e.g. `https://cartography.onrender.com`).
 ### Notes
 
 - Build installs Chromium with `PLAYWRIGHT_BROWSERS_PATH=0` so browsers live under `node_modules` (not an ephemeral cache).
-- Cold starts / crawls on free tiers can be slow or fail under memory pressure — prefer **Starter (1 GB)+**.
-- Jobs are in-memory: a restart/redeploy clears in-progress and completed jobs.
+- On Render the crawler uses **1 concurrent page**, blocks images/fonts/CSS, and allows only **one crawl at a time** to reduce OOM kills.
+- Cold starts / crawls on free tiers can still fail under memory pressure — prefer **Starter (1 GB)+**.
+- Jobs are in-memory: a process restart clears in-progress and completed jobs.

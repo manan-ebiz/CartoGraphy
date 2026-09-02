@@ -10,6 +10,9 @@ const router = Router();
 /** Soft safety ceiling for memory; not exposed as a restrictive UI limit. */
 const DEFAULT_MAX_PAGES = 10000;
 
+/** Only one Chromium crawl at a time on this process (Render memory). */
+let activeCrawlJobId = null;
+
 function isValidHttpUrl(value) {
   try {
     const u = new URL(value);
@@ -26,17 +29,33 @@ router.post('/jobs', async (req, res) => {
     return res.status(400).json({ error: 'Enter a valid URL, including http:// or https://.' });
   }
 
+  if (activeCrawlJobId) {
+    const existing = getJob(activeCrawlJobId);
+    if (existing && ['queued', 'crawling', 'paused', 'generating'].includes(existing.status)) {
+      return res.status(503).json({
+        error:
+          'Another crawl is already running on this server. Wait for it to finish, then try again.',
+      });
+    }
+    activeCrawlJobId = null;
+  }
+
   const requested = Number(maxPages);
   const resolvedMaxPages =
     Number.isFinite(requested) && requested > 0 ? Math.floor(requested) : DEFAULT_MAX_PAGES;
   const job = createJob({ url, maxPages: resolvedMaxPages });
+  activeCrawlJobId = job.id;
 
   res.status(201).json({ jobId: job.id });
 
   // Run the crawl in the background; progress goes out over SSE.
-  runJob(job.id).catch((err) => {
-    emitProgress(job.id, { patch: { status: 'error' }, logLine: `Job failed: ${err.message}` });
-  });
+  runJob(job.id)
+    .catch((err) => {
+      emitProgress(job.id, { patch: { status: 'error' }, logLine: `Job failed: ${err.message}` });
+    })
+    .finally(() => {
+      if (activeCrawlJobId === job.id) activeCrawlJobId = null;
+    });
 });
 
 async function runJob(jobId) {

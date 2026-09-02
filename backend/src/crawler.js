@@ -7,7 +7,8 @@ const CONCURRENCY = Math.max(
   Math.min(
     4,
     Number(process.env.CRAWL_CONCURRENCY) ||
-      (process.env.NODE_ENV === 'production' || process.env.RENDER ? 2 : 4),
+      // Render OOM-kills multi-tab Chromium; default to one page at a time there.
+      (process.env.RENDER ? 1 : process.env.NODE_ENV === 'production' ? 2 : 4),
   ),
 );
 const NAV_TIMEOUT_MS = 20000;
@@ -57,11 +58,26 @@ export async function crawlSite({
 
   const browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
   });
-  const context = await browser.newContext({ userAgent: USER_AGENT });
+  const context = await browser.newContext({
+    userAgent: USER_AGENT,
+    javaScriptEnabled: true,
+    // Skip downloading heavy assets — we only need HTML anchors for the sitemap.
+    bypassCSP: true,
+  });
+  await context.route('**/*', (route) => {
+    const type = route.request().resourceType();
+    if (type === 'image' || type === 'media' || type === 'font' || type === 'stylesheet') {
+      return route.abort();
+    }
+    return route.continue();
+  });
 
-  onProgress({ patch: { status: 'crawling' }, logLine: `Fetching robots.txt from ${origin}` });
+  onProgress({
+    patch: { status: 'crawling' },
+    logLine: `Fetching robots.txt from ${origin} (concurrency ${CONCURRENCY})`,
+  });
 
   async function awaitControl() {
     while (true) {
