@@ -48,7 +48,10 @@ export async function crawlSite({
   let cancelled = false;
   let pauseAnnounced = false;
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+  });
   const context = await browser.newContext({ userAgent: USER_AGENT });
 
   onProgress({ patch: { status: 'crawling' }, logLine: `Fetching robots.txt from ${origin}` });

@@ -78,15 +78,12 @@ Create a **Web Service** from `https://github.com/manan-ebiz/CartoGraphy`.
 
 ### Environment Variables
 
-None are required for the MVP. Render injects `PORT` automatically.
+Render injects `PORT` automatically — do **not** set it yourself.
 
-Optional:
-
-| Key | Value |
-|-----|--------|
-| `NODE_ENV` | `production` |
-
-Do **not** set `PORT` yourself — Render assigns it.
+| Key | Value | Required |
+|-----|--------|----------|
+| `PLAYWRIGHT_BROWSERS_PATH` | `0` | **Yes** (bundles Chromium into the app so runtime can find it) |
+| `NODE_ENV` | `production` | Optional |
 
 ### After deploy
 
@@ -94,5 +91,6 @@ Open the service URL Render gives you (e.g. `https://cartography.onrender.com`).
 
 ### Notes
 
-- First crawl downloads/uses Chromium; cold starts on free tiers can be slow or fail under memory pressure.
+- Build installs Chromium with `PLAYWRIGHT_BROWSERS_PATH=0` so browsers live under `node_modules` (not an ephemeral cache).
+- Cold starts / crawls on free tiers can be slow or fail under memory pressure — prefer **Starter (1 GB)+**.
 - Jobs are in-memory: a restart/redeploy clears in-progress and completed jobs.
