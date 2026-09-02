@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "description": "Cartograph sitemap generator — frontend + backend for Render",
   "scripts": {
-    "build": "npm install --prefix frontend --include=dev && npm run build --prefix frontend && npm install --prefix backend && PLAYWRIGHT_BROWSERS_PATH=0 npx --prefix backend playwright install chromium",
-    "start": "PLAYWRIGHT_BROWSERS_PATH=0 node backend/server.js"
+    "build": "npm install --prefix frontend --include=dev && npm run build --prefix frontend && npm install --prefix backend && node scripts/install-playwright-if-needed.js",
+    "start": "node backend/server.js"
   },
   "engines": {
     "node": ">=18"
