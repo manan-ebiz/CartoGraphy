@@ -122,14 +122,6 @@ a { color: var(--teal); }
   max-width: 12ch;
 }
 
-.hero p {
-  color: var(--paper-dim);
-  font-size: 15px;
-  line-height: 1.6;
-  max-width: 46ch;
-  margin: 20px 0 40px;
-}
-
 .field-group {
   display: flex;
   flex-direction: column;

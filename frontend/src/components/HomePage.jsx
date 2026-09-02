@@ -30,7 +30,7 @@ export default function HomePage() {
     <div className="hero">
       <img
         src="/logo.png"
-        alt="CARTOGRAPH"
+        alt="CARTOGRAPH — Turn data into maps"
         className="hero-logo"
       />
       <p className="hero-tagline">Turn data into maps</p>
