@@ -123,7 +123,7 @@ export default function ResultsPage() {
           <div className="xml-preview">{xmlPreview}</div>
           <div className="actions">
             <a href={`/api/jobs/${jobId}/sitemap.xml`} download>
-              <button type="button" className="ghost">Download sitemap.xml</button>
+              <button type="button" className="primary">Download sitemap.xml</button>
             </a>
           </div>
         </div>
