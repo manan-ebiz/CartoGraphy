@@ -1,0 +1,17 @@
+{
+  "name": "sitemap-generator-backend",
+  "version": "1.0.0",
+  "description": "Backend for the sitemap generator platform: crawls a site and produces an XML sitemap plus an interactive hierarchy diagram.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "playwright": "^1.46.0",
+    "uuid": "^9.0.1"
+  }
+}
