@@ -84,6 +84,7 @@ Render injects `PORT` automatically — do **not** set it yourself.
 |-----|--------|----------|
 | `PLAYWRIGHT_BROWSERS_PATH` | `0` | **Yes** (bundles Chromium into the app so runtime can find it) |
 | `NODE_ENV` | `production` | Optional |
+| `CRAWL_CONCURRENCY` | `2` (default on Render) or `1` if crawls still drop | Optional |
 
 ### After deploy
 

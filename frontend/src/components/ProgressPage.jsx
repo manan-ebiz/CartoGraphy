@@ -27,6 +27,7 @@ export default function ProgressPage() {
   const [controlBusy, setControlBusy] = useState(false);
   const logRef = useRef(null);
   const statusRef = useRef(status);
+  const finishedRef = useRef(false);
 
   statusRef.current = status;
 
@@ -60,22 +61,13 @@ export default function ProgressPage() {
   }, [jobId]);
 
   useEffect(() => {
-    const source = new EventSource(`/api/jobs/${jobId}/events`);
+    finishedRef.current = false;
+    let source = null;
+    let reconnectTimer = null;
+    let cancelled = false;
 
-    source.addEventListener('progress', (e) => {
-      const data = JSON.parse(e.data);
-      setStatus(data.status);
-      setPagesCrawled(data.pagesCrawled);
-      setPagesDiscovered(data.pagesDiscovered);
-      setCurrentUrl(data.currentUrl);
-      if (data.logLine) {
-        setEntries((prev) => [...prev.slice(-199), { line: data.logLine }]);
-      }
-    });
-
-    source.addEventListener('complete', (e) => {
-      const data = JSON.parse(e.data);
-      source.close();
+    function handleComplete(data) {
+      finishedRef.current = true;
       setActive(false);
       if (data.status === 'done') {
         navigate(`/jobs/${jobId}/results`);
@@ -85,20 +77,85 @@ export default function ProgressPage() {
         setStatus('error');
         setErrorMessage('The crawl failed. Check the log below for details.');
       }
-    });
+    }
 
-    source.onerror = () => {
-      source.close();
-      if (ACTIVE_STATUSES.has(statusRef.current)) {
+    function applyProgress(data) {
+      setStatus(data.status);
+      setPagesCrawled(data.pagesCrawled);
+      setPagesDiscovered(data.pagesDiscovered);
+      setCurrentUrl(data.currentUrl);
+      if (data.logLine) {
+        setEntries((prev) => [...prev.slice(-199), { line: data.logLine }]);
+      }
+      if (data.status === 'done' || data.status === 'error' || data.status === 'cancelled') {
+        handleComplete({ status: data.status });
+      }
+    }
+
+    async function recoverFromDisconnect() {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`);
+        if (!res.ok) {
+          setStatus('error');
+          setErrorMessage('Job not found or expired.');
+          setActive(false);
+          finishedRef.current = true;
+          return;
+        }
+        const job = await res.json();
+        setStatus(job.status);
+        setPagesCrawled(job.pagesCrawled);
+        setPagesDiscovered(job.pagesDiscovered);
+        if (job.log?.length) {
+          setEntries(job.log.map((e) => ({ line: e.line })));
+        }
+        if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') {
+          handleComplete({ status: job.status });
+          return;
+        }
+        // Still running — reconnect SSE (Render proxies sometimes drop idle streams).
+        setErrorMessage(null);
+        reconnectTimer = setTimeout(connect, 1000);
+      } catch {
         setStatus('error');
         setErrorMessage(
           'Lost connection to the server. The crawl may have failed, or this job expired.',
         );
         setActive(false);
+        finishedRef.current = true;
       }
-    };
+    }
 
-    return () => source.close();
+    function connect() {
+      if (cancelled || finishedRef.current) return;
+      source = new EventSource(`/api/jobs/${jobId}/events`);
+
+      source.addEventListener('progress', (e) => {
+        const data = JSON.parse(e.data);
+        applyProgress(data);
+      });
+
+      source.addEventListener('complete', (e) => {
+        const data = JSON.parse(e.data);
+        source.close();
+        handleComplete(data);
+      });
+
+      source.onerror = () => {
+        source.close();
+        if (cancelled || finishedRef.current) return;
+        if (!ACTIVE_STATUSES.has(statusRef.current)) return;
+        recoverFromDisconnect();
+      };
+    }
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (source) source.close();
+    };
   }, [jobId, navigate, setActive]);
 
   useEffect(() => {

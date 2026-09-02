@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 // Jobs live in memory only — this is a stateless, one-off tool with no accounts,
 // so results just need to survive long enough for the user to view/download them.
 const JOB_TTL_MS = 1000 * 60 * 60 * 2; // 2 hours
+const SSE_HEARTBEAT_MS = 15000; // keep proxies (e.g. Render) from closing idle SSE
 
 const jobs = new Map();
 
@@ -26,6 +27,7 @@ export function createJob({ url, maxPages }) {
     createdAt: Date.now(),
     completedAt: null,
     listeners: new Set(),
+    heartbeat: null,
   };
   jobs.set(id, job);
   scheduleCleanup(id);
@@ -43,16 +45,42 @@ export function setJobControl(id, control) {
   return job;
 }
 
+function stopHeartbeat(job) {
+  if (job.heartbeat) {
+    clearInterval(job.heartbeat);
+    job.heartbeat = null;
+  }
+}
+
+function startHeartbeat(job) {
+  if (job.heartbeat) return;
+  job.heartbeat = setInterval(() => {
+    for (const res of [...job.listeners]) {
+      try {
+        // SSE comment — ignored by EventSource clients, keeps the TCP connection warm.
+        res.write(`: ping ${Date.now()}\n\n`);
+      } catch {
+        job.listeners.delete(res);
+      }
+    }
+    if (job.listeners.size === 0) stopHeartbeat(job);
+  }, SSE_HEARTBEAT_MS);
+  job.heartbeat.unref?.();
+}
+
 export function subscribe(id, res) {
   const job = jobs.get(id);
   if (!job) return false;
   job.listeners.add(res);
+  startHeartbeat(job);
   return true;
 }
 
 export function unsubscribe(id, res) {
   const job = jobs.get(id);
-  if (job) job.listeners.delete(res);
+  if (!job) return;
+  job.listeners.delete(res);
+  if (job.listeners.size === 0) stopHeartbeat(job);
 }
 
 // Pushes a progress event to every open SSE connection for this job, and
@@ -76,19 +104,32 @@ export function emitProgress(id, event) {
     logLine: event.logLine || null,
   });
 
-  for (const res of job.listeners) {
-    res.write(`event: progress\ndata: ${payload}\n\n`);
+  for (const res of [...job.listeners]) {
+    try {
+      res.write(`event: progress\ndata: ${payload}\n\n`);
+    } catch {
+      job.listeners.delete(res);
+    }
   }
 
   if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') {
-    for (const res of job.listeners) {
-      res.write(`event: complete\ndata: ${JSON.stringify({ status: job.status })}\n\n`);
-      res.end();
+    stopHeartbeat(job);
+    for (const res of [...job.listeners]) {
+      try {
+        res.write(`event: complete\ndata: ${JSON.stringify({ status: job.status })}\n\n`);
+        res.end();
+      } catch {
+        // ignore
+      }
     }
     job.listeners.clear();
   }
 }
 
 function scheduleCleanup(id) {
-  setTimeout(() => jobs.delete(id), JOB_TTL_MS).unref();
+  setTimeout(() => {
+    const job = jobs.get(id);
+    if (job) stopHeartbeat(job);
+    jobs.delete(id);
+  }, JOB_TTL_MS).unref();
 }

@@ -2,7 +2,14 @@ import { chromium } from 'playwright';
 import { fetchRobotsRules, isAllowed } from './robots.js';
 import { normalizeUrl } from './urlNormalize.js';
 
-const CONCURRENCY = 4;
+const CONCURRENCY = Math.max(
+  1,
+  Math.min(
+    4,
+    Number(process.env.CRAWL_CONCURRENCY) ||
+      (process.env.NODE_ENV === 'production' || process.env.RENDER ? 2 : 4),
+  ),
+);
 const NAV_TIMEOUT_MS = 20000;
 const SPA_LINK_WAIT_MS = 1500;
 const CONTROL_POLL_MS = 400;
