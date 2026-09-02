@@ -1,0 +1,13 @@
+{
+  "name": "cartograph",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cartograph sitemap generator — frontend + backend for Render",
+  "scripts": {
+    "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend && npx --prefix backend playwright install chromium",
+    "start": "node backend/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

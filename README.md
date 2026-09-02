@@ -62,22 +62,37 @@ Open `http://localhost:5173`, enter a URL, and go.
   pan/zoom and click-to-expand/collapse. This file is what gets downloaded, and
   it's also what's embedded in an `<iframe>` on the results page for in-app preview.
 
-## Known limitations / things to harden before production
+## Deploy on Render (single Web Service)
 
-- **Job storage is in-memory** — fine for a demo or single-instance deployment,
-  but a restart loses in-progress and recently-completed jobs. For multi-instance
-  hosting, swap the `jobManager.js` Map for Redis (or similar) and move SSE
-  fan-out to a pub/sub channel.
-- **No rate limiting or SSRF blocking by design** — any http(s) URL can be
-  crawled. If you expose this publicly, add abuse controls appropriate for
-  your threat model.
-- **Concurrency is fixed at 4** — tune based on your hosting resources; higher
-  concurrency crawls faster but uses more memory (each concurrent page is a real
-  browser tab) and is more likely to trip target sites' own rate limiting.
-- **The interactive diagram needs internet access to open** (it loads D3 from a
-  CDN) — fine for normal use, but won't render offline.
-- **This container's network is locked down to package registries**, so I
-  verified every module except the live browser crawl itself (which needs to
-  reach arbitrary websites and download the Chromium binary — both blocked
-  here). Run the steps above locally to see the actual crawl end-to-end; I'd
-  recommend trying it against a small site first.
+Create a **Web Service** from `https://github.com/manan-ebiz/CartoGraphy`.
+
+| Field | Value |
+|-------|--------|
+| **Language** | `Node` |
+| **Branch** | `main` |
+| **Region** | Oregon (or any; keep other services in the same region if you use private networking) |
+| **Root Directory** | *(leave empty)* |
+| **Build Command** | `npm run build` |
+| **Start Command** | `npm start` |
+| **Instance** | At least **Starter** (1 GB). Free/tiny instances often OOM with Playwright/Chromium. |
+
+### Environment Variables
+
+None are required for the MVP. Render injects `PORT` automatically.
+
+Optional:
+
+| Key | Value |
+|-----|--------|
+| `NODE_ENV` | `production` |
+
+Do **not** set `PORT` yourself — Render assigns it.
+
+### After deploy
+
+Open the service URL Render gives you (e.g. `https://cartography.onrender.com`). The UI and `/api` are on the same host.
+
+### Notes
+
+- First crawl downloads/uses Chromium; cold starts on free tiers can be slow or fail under memory pressure.
+- Jobs are in-memory: a restart/redeploy clears in-progress and completed jobs.
