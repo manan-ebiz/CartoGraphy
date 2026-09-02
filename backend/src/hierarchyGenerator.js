@@ -232,13 +232,14 @@ export function generateHierarchyHtml(tree, siteLabel) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <style>
   :root {
-    --ink: #101820;
-    --panel: #16212c;
-    --paper: #ede6d6;
-    --paper-dim: #a7a190;
-    --brass: #c9a227;
-    --line: #3a4753;
-    --muted-stroke: #5a6874;
+    --ink: #0b1f3a;
+    --panel: #122a4a;
+    --paper: #ece5d3;
+    --paper-dim: #9a9284;
+    --brass: #d4af37;
+    --blue: #d4af37;
+    --line: #243f66;
+    --muted-stroke: #4a6280;
     --topbar-h: 56px;
   }
   * { box-sizing: border-box; }

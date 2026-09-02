@@ -16,9 +16,10 @@ function Masthead() {
 
   return (
     <header className="masthead">
-      <Link to="/" className="brand-lockup" onClick={handleHomeClick}>
-        <img src="/logo.png" alt="CARTOGRAPH — Turn data into maps" className="brand-logo-bar" />
+      <Link to="/" className="mark" onClick={handleHomeClick}>
+        carto<span>graph</span>
       </Link>
+      <span className="coords">TURN YOUR DATA INTO MAP</span>
     </header>
   );
 }
@@ -26,11 +27,10 @@ function Masthead() {
 function Shell() {
   const { pathname } = useLocation();
   const wide = pathname.includes('/results');
-  const home = pathname === '/';
 
   return (
-    <div className={`shell${wide ? ' shell-wide' : ''}${home ? ' shell-home' : ''}`}>
-      {!home && <Masthead />}
+    <div className={`shell${wide ? ' shell-wide' : ''}`}>
+      <Masthead />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/jobs/:jobId" element={<ProgressPage />} />
