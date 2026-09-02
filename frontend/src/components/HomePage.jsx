@@ -28,11 +28,15 @@ export default function HomePage() {
 
   return (
     <div className="hero">
-      <h1>Chart the full shape of a website.</h1>
-      <p>
-        Enter a URL and Cartograph crawls every reachable page, then hands you an XML
-        sitemap for search engines and a zoomable diagram of how the site is actually
-        structured.
+      <img
+        src="/logo.png"
+        alt="CARTOGRAPH"
+        className="hero-logo"
+      />
+      <p className="hero-tagline">Turn data into maps</p>
+      <p className="hero-support">
+        Enter a website URL. Cartograph crawls reachable pages and returns a unique URL list,
+        XML sitemap, and an interactive site structure.
       </p>
 
       {error && <div className="error-banner">{error}</div>}
