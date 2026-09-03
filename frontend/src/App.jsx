@@ -26,7 +26,7 @@ function Masthead() {
 
 function Shell() {
   const { pathname } = useLocation();
-  const wide = pathname.includes('/results');
+  const wide = pathname.includes('/results') || pathname.includes('/jobs/');
 
   return (
     <div className={`shell${wide ? ' shell-wide' : ''}`}>
