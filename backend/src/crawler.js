@@ -194,10 +194,11 @@ async function crawlWithHttp({
           canonical = url;
         }
 
+        let addedIndex = 0;
         if (!pageUrls.has(canonical)) {
           pageUrls.add(canonical);
           visited.add(canonical);
-          pages.push({
+          addedIndex = pages.push({
             url: canonical,
             title: title || canonical,
             lastmod: new Date().toISOString().slice(0, 10),
@@ -217,7 +218,7 @@ async function crawlWithHttp({
 
         onProgress({
           patch: { pagesCrawled: pages.length, pagesDiscovered: queued.size },
-          logLine: `${pages.length}. ${canonical}`,
+          logLine: addedIndex ? `${addedIndex}. ${canonical}` : null,
         });
       } catch (err) {
         const message = err.name === 'AbortError' ? 'Navigation timeout' : err.message;
@@ -333,10 +334,12 @@ async function crawlWithPlaywright({
         } catch {
           canonical = url;
         }
+
+        let addedIndex = 0;
         if (!pageUrls.has(canonical)) {
           pageUrls.add(canonical);
           visited.add(canonical);
-          pages.push({
+          addedIndex = pages.push({
             url: canonical,
             title: title || canonical,
             lastmod: new Date().toISOString().slice(0, 10),
@@ -356,7 +359,7 @@ async function crawlWithPlaywright({
 
         onProgress({
           patch: { pagesCrawled: pages.length, pagesDiscovered: queued.size },
-          logLine: `${pages.length}. ${canonical}`,
+          logLine: addedIndex ? `${addedIndex}. ${canonical}` : null,
         });
       } catch (err) {
         errors.push({ url, error: err.message });

@@ -195,44 +195,74 @@ export default function ProgressPage() {
   const canResume = status === 'paused' && !controlBusy;
 
   return (
-    <div>
+    <div className="progress-page">
       {errorMessage && <div className="error-banner">{errorMessage}</div>}
 
-      <div className="status-line">
-        <span className={`dot${status === 'paused' ? ' paused' : ''}`} />
-        <span>
-          {STATUS_LABEL[status] || status}
-          {currentUrl ? ` — ${currentUrl}` : ''}
-        </span>
-      </div>
-
-      <div className="progress-track">
-        <div className="progress-fill" style={{ width: `${pct}%` }} />
-      </div>
-      <div className="progress-count">
-        {pagesCrawled} crawled of {pagesDiscovered} discovered so far
-      </div>
-
-      <div className="actions progress-actions">
-        {status === 'paused' ? (
-          <button type="button" className="primary" onClick={handleResume} disabled={!canResume}>
-            Resume
-          </button>
-        ) : (
-          <button type="button" className="ghost" onClick={handlePause} disabled={!canPause}>
-            Pause
-          </button>
-        )}
-      </div>
-
-      <div className="log" ref={logRef}>
-        {entries.map((entry, i) => (
-          <div className="entry" key={i}>
-            {entry.line}
+      <section className="progress-panel">
+        <div className="progress-header">
+          <div className="status-line">
+            <span className={`dot${status === 'paused' ? ' paused' : ''}`} />
+            <span className="status-label">{STATUS_LABEL[status] || status}</span>
           </div>
-        ))}
-        {entries.length === 0 && <div className="entry">Waiting for the crawler to start…</div>}
-      </div>
+          <div className="progress-pct">{Math.round(pct)}%</div>
+        </div>
+
+        {currentUrl && (
+          <p className="progress-current" title={currentUrl}>
+            {currentUrl}
+          </p>
+        )}
+
+        <div className="progress-track">
+          <div className="progress-fill" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="progress-count">
+          <strong>{pagesCrawled}</strong> crawled
+          <span className="progress-count-sep">·</span>
+          <strong>{pagesDiscovered}</strong> discovered
+        </div>
+
+        <div className="actions progress-actions">
+          {status === 'paused' ? (
+            <button type="button" className="primary" onClick={handleResume} disabled={!canResume}>
+              Resume
+            </button>
+          ) : (
+            <button type="button" className="secondary" onClick={handlePause} disabled={!canPause}>
+              Pause
+            </button>
+          )}
+        </div>
+      </section>
+
+      <section className="log-panel">
+        <div className="log-panel-head">
+          <h2>Crawl log</h2>
+          <span className="log-panel-meta">{entries.length} lines</span>
+        </div>
+        <div className="log" ref={logRef}>
+          {entries.map((entry, i) => {
+            const isNumbered = /^\d+\.\s+/.test(entry.line);
+            const isFailed = entry.line.startsWith('Failed:');
+            return (
+              <div
+                className={`entry${isFailed ? ' entry-fail' : ''}${isNumbered ? ' entry-url' : ''}`}
+                key={i}
+              >
+                {isNumbered ? (
+                  <>
+                    <span className="entry-num">{entry.line.match(/^\d+/)[0]}</span>
+                    <span className="entry-url-text">{entry.line.replace(/^\d+\.\s+/, '')}</span>
+                  </>
+                ) : (
+                  entry.line
+                )}
+              </div>
+            );
+          })}
+          {entries.length === 0 && <div className="entry">Waiting for the crawler to start…</div>}
+        </div>
+      </section>
     </div>
   );
 }
