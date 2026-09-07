@@ -25,23 +25,30 @@ frontend/    React + Vite single-page app (URL form → progress → results)
 
 You'll need Node 18+.
 
-### 1. Backend
+### Quick Start (All-in-one)
 
+```bash
+npm run build
+npm start
+```
+Open `http://localhost:4000` to access the full application.
+
+### Or Run in Development Mode (Live reload)
+
+**Terminal 1 — Backend:**
 ```bash
 cd backend
 npm install
-npm start                          # listens on http://localhost:4000
+npm run dev                        # listens on http://localhost:4000
 ```
 
 Optional SPA crawling (needs more RAM):
-
 ```bash
 npx playwright install chromium
 CRAWL_ENGINE=playwright npm start
 ```
 
-### 2. Frontend
-
+**Terminal 2 — Frontend:**
 ```bash
 cd frontend
 npm install
@@ -53,11 +60,13 @@ Open `http://localhost:5173`, enter a URL, and go.
 ## How it works
 
 - **Crawling** (`backend/src/crawler.js`): by default fetches each page over HTTP,
-  parses HTML links with Cheerio, and does a breadth-first crawl (soft ceiling
+  streams HTML chunks through `htmlparser2`, and does a breadth-first crawl (soft ceiling
   10,000 pages). It respects `robots.txt`, de-dupes URLs (trailing slashes, hashes,
   common tracking params), and skips non-HTML assets. Set `CRAWL_ENGINE=playwright`
   to use a headless browser for client-rendered SPAs instead. Any http(s) URL is
   accepted (no rate limit or SSRF block).
+- **Subfolder Exclusion**: Exclude specific sections or directories (e.g. `example.com/blog` or `/blog`).
+  The crawler avoids enqueuing or fetching those paths and omits them from all final output files.
 - **Progress**: the frontend opens a Server-Sent Events (SSE) connection
   (`GET /api/jobs/:id/events`) and gets a live stream of pages crawled/discovered
   and a scrolling log (numbered `N. url` lines). You can pause/resume mid-crawl;
