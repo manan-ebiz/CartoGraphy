@@ -93,6 +93,7 @@ Render injects `PORT` automatically — do **not** set it yourself.
 |-----|--------|----------|
 | `CRAWL_ENGINE` | `http` (default) or `playwright` | Optional — leave unset for HTTP |
 | `CRAWL_CONCURRENCY` | `2` | Optional (HTTP default on Render is 2) |
+| `MAX_PAGE_BYTES` | `524288` (512 KB) | Optional — maximum HTML bytes streamed per page |
 | `INSTALL_PLAYWRIGHT` | `1` | Only if `CRAWL_ENGINE=playwright` — installs Chromium at build |
 | `PLAYWRIGHT_BROWSERS_PATH` | `0` | Only needed with Playwright |
 | `NODE_ENV` | `production` | Optional |
@@ -104,6 +105,8 @@ Open the service URL Render gives you (e.g. `https://cartography.onrender.com`).
 ### Notes
 
 - Default builds **skip** Chromium install to keep deploys light and memory-safe.
+- HTTP crawler streams incoming HTML chunks through `htmlparser2` and caps downloads at 512 KB per page (`MAX_PAGE_BYTES`), keeping memory usage minimal.
+- Non-HTML responses (PDFs, media, archives, binaries) are either skipped by extension or aborted immediately at the header level before downloading body bytes.
 - To enable SPA crawling on Render: set `CRAWL_ENGINE=playwright`, `INSTALL_PLAYWRIGHT=1`,
   `PLAYWRIGHT_BROWSERS_PATH=0`, and use at least a **Starter 1 GB** instance.
 - Only **one crawl at a time** is allowed on a process.

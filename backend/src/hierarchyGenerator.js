@@ -244,7 +244,13 @@ export function generateHierarchyHtml(tree, siteLabel) {
   }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0; height: 100%; background: var(--ink); color: var(--paper);
+    margin: 0; height: 100%; color: var(--paper);
+    background-color: #0a1628;
+    background-image:
+      linear-gradient(165deg, #06101f 0%, #0b2a5c 42%, #1a4f9c 72%, #2563c7 100%),
+      radial-gradient(ellipse 90% 55% at 15% 0%, rgba(96, 165, 250, 0.28), transparent 55%),
+      radial-gradient(ellipse 70% 45% at 90% 85%, rgba(37, 99, 235, 0.35), transparent 50%);
+    background-attachment: fixed;
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
     overflow: hidden;
   }
@@ -254,7 +260,7 @@ export function generateHierarchyHtml(tree, siteLabel) {
     display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;
     min-height: var(--topbar-h);
     padding: 10px 20px;
-    background: var(--ink);
+    background: rgba(6, 16, 31, 0.85);
     border-bottom: 1px solid var(--line);
   }
   #topbar h1 {

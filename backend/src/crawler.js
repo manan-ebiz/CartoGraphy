@@ -1,4 +1,4 @@
-import * as cheerio from 'cheerio';
+import { Parser } from 'htmlparser2';
 import { fetchRobotsRules, isAllowed } from './robots.js';
 import { normalizeUrl } from './urlNormalize.js';
 
@@ -30,6 +30,12 @@ const SPA_LINK_WAIT_MS = 1500;
 const CONTROL_POLL_MS = 400;
 const USER_AGENT = 'CartographBot/1.0 (+https://cartograph.dev/bot; Website sitemap generator)';
 
+// Cap download size per page for the HTTP crawler (default 512 KB) to prevent memory spikes on small hosts.
+const MAX_HTML_BYTES = Math.max(
+  64 * 1024,
+  Number(process.env.MAX_PAGE_BYTES) || 512 * 1024,
+);
+
 function isSameSite(url, rootHostname) {
   try {
     return new URL(url).hostname.toLowerCase() === rootHostname;
@@ -38,12 +44,84 @@ function isSameSite(url, rootHostname) {
   }
 }
 
-const SKIP_EXTENSIONS = /\.(pdf|jpg|jpeg|png|gif|svg|webp|zip|mp4|mp3|css|js|ico|woff2?|xml|json)$/i;
+const SKIP_EXTENSIONS =
+  /\.(pdf|jpg|jpeg|png|gif|svg|webp|avif|bmp|tiff|zip|gz|tar|tgz|bz2|7z|rar|mp4|mp3|mkv|mov|avi|wmv|flac|wav|ogg|webm|css|js|mjs|ico|woff2?|eot|ttf|otf|xml|json|csv|tsv|doc|docx|xls|xlsx|ppt|pptx|bin|exe|dmg|iso|apk|deb|rpm)$/i;
 
 const DEFAULT_MAX_PAGES = 10000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Stream HTML chunks through htmlparser2 SAX parser.
+ * Extracts title and link hrefs on the fly and cancels the stream once maxBytes is reached.
+ */
+async function parseHtmlStream(response, maxBytes = MAX_HTML_BYTES) {
+  let title = '';
+  let inTitle = false;
+  const hrefs = [];
+
+  const parser = new Parser(
+    {
+      onopentag(name, attribs) {
+        const tag = name.toLowerCase();
+        if (tag === 'a' && attribs && attribs.href) {
+          hrefs.push(attribs.href);
+        } else if (tag === 'title') {
+          inTitle = true;
+        }
+      },
+      ontext(text) {
+        if (inTitle && title.length < 300) {
+          title += text;
+        }
+      },
+      onclosetag(name) {
+        if (name.toLowerCase() === 'title') {
+          inTitle = false;
+        }
+      },
+    },
+    { decodeEntities: true, lowerCaseTags: true },
+  );
+
+  if (!response.body) {
+    parser.end();
+    return { title: title.trim(), hrefs };
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        totalBytes += value.byteLength;
+        const chunk = decoder.decode(value, { stream: true });
+        parser.write(chunk);
+        if (totalBytes >= maxBytes) {
+          try {
+            await reader.cancel();
+          } catch {}
+          break;
+        }
+      }
+    }
+  } catch {
+    try {
+      await reader.cancel();
+    } catch {}
+  } finally {
+    const remaining = decoder.decode();
+    if (remaining) parser.write(remaining);
+    parser.end();
+  }
+
+  return { title: title.trim(), hrefs };
 }
 
 function enqueueLinks({
@@ -166,6 +244,9 @@ async function crawlWithHttp({
 
         const status = response.status;
         if (status >= 400) {
+          try {
+            await response.body?.cancel();
+          } catch {}
           errors.push({ url, error: `HTTP ${status}` });
           onProgress({
             patch: { pagesCrawled: pages.length },
@@ -176,16 +257,14 @@ async function crawlWithHttp({
 
         const contentType = (response.headers.get('content-type') || '').toLowerCase();
         if (contentType && !contentType.includes('html') && !contentType.includes('xhtml')) {
-          onProgress({ logLine: `Skipped (non-HTML): ${url}` });
+          try {
+            await response.body?.cancel();
+          } catch {}
+          onProgress({ logLine: `Skipped (non-HTML: ${contentType}): ${url}` });
           continue;
         }
 
-        const html = await response.text();
-        const $ = cheerio.load(html);
-        const title = ($('title').first().text() || '').trim();
-        const hrefs = $('a[href]')
-          .map((_, el) => $(el).attr('href'))
-          .get();
+        const { title, hrefs } = await parseHtmlStream(response, MAX_HTML_BYTES);
 
         let canonical;
         try {
