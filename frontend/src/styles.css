@@ -134,6 +134,133 @@ input[type="text"]:focus, input[type="url"]:focus, select:focus {
 
 .row > * { flex: 1; }
 
+/* Exception bar & chips */
+.exception-bar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exception-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.exception-bar-header label {
+  margin-bottom: 0;
+}
+
+.field-tip {
+  font-size: 11px;
+  color: var(--paper-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.field-help {
+  font-size: 12px;
+  color: var(--paper-dim);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.field-help code {
+  background: rgba(236, 229, 211, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--brass);
+}
+
+.exception-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.exception-input-row input {
+  flex: 1;
+}
+
+.secondary-btn {
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--brass);
+  border: 1px solid var(--brass);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 18px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: var(--brass);
+  color: var(--ink);
+}
+
+.secondary-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: var(--line);
+  color: var(--paper-dim);
+}
+
+.excluded-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.excluded-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(18, 42, 74, 0.85);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  color: var(--paper);
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  font-size: 12px;
+}
+
+.chip-text {
+  word-break: break-all;
+}
+
+.chip-remove {
+  background: transparent;
+  border: none;
+  color: var(--paper-dim);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  margin-left: 2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chip-remove:hover {
+  color: #f87171;
+}
+
+.excluded-summary {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--paper-dim);
+}
+
+.excluded-summary .label {
+  display: inline;
+  color: var(--brass);
+  font-weight: 500;
+  margin-right: 4px;
+}
+
 button {
   font-family: inherit;
   font-size: 14px;

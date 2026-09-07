@@ -1,6 +1,6 @@
 import { Parser } from 'htmlparser2';
 import { fetchRobotsRules, isAllowed } from './robots.js';
-import { normalizeUrl } from './urlNormalize.js';
+import { isUrlExcluded, normalizeUrl } from './urlNormalize.js';
 
 function resolveEngine() {
   const raw = (process.env.CRAWL_ENGINE || '').toLowerCase().trim();
@@ -133,6 +133,7 @@ function enqueueLinks({
   pageUrls,
   queue,
   pageLimit,
+  excludedPaths = [],
 }) {
   for (const href of hrefs) {
     if (!href || href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('javascript:')) {
@@ -146,6 +147,7 @@ function enqueueLinks({
     }
     if (SKIP_EXTENSIONS.test(new URL(absolute).pathname)) continue;
     if (!isSameSite(absolute, rootHostname)) continue;
+    if (isUrlExcluded(absolute, excludedPaths)) continue;
     if (queued.has(absolute) || visited.has(absolute) || pageUrls.has(absolute)) continue;
     if (queued.size >= pageLimit) continue;
 
@@ -185,6 +187,7 @@ async function crawlWithHttp({
   origin,
   rootHostname,
   robotsRules,
+  excludedPaths = [],
   onProgress,
   getControl,
 }) {
@@ -210,6 +213,10 @@ async function crawlWithHttp({
 
       const url = queue.shift();
       if (!url || visited.has(url)) continue;
+      if (isUrlExcluded(url, excludedPaths)) {
+        onProgress({ logLine: `Skipped (excluded folder): ${url}` });
+        continue;
+      }
       visited.add(url);
 
       const pathname = new URL(url).pathname;
@@ -273,6 +280,11 @@ async function crawlWithHttp({
           canonical = url;
         }
 
+        if (isUrlExcluded(canonical, excludedPaths)) {
+          onProgress({ logLine: `Skipped (excluded folder): ${canonical}` });
+          continue;
+        }
+
         let addedIndex = 0;
         if (!pageUrls.has(canonical)) {
           pageUrls.add(canonical);
@@ -293,6 +305,7 @@ async function crawlWithHttp({
           pageUrls,
           queue,
           pageLimit,
+          excludedPaths,
         });
 
         onProgress({
@@ -328,6 +341,7 @@ async function crawlWithPlaywright({
   origin,
   rootHostname,
   robotsRules,
+  excludedPaths = [],
   onProgress,
   getControl,
 }) {
@@ -375,6 +389,10 @@ async function crawlWithPlaywright({
 
       const url = queue.shift();
       if (!url || visited.has(url)) continue;
+      if (isUrlExcluded(url, excludedPaths)) {
+        onProgress({ logLine: `Skipped (excluded folder): ${url}` });
+        continue;
+      }
       visited.add(url);
 
       const pathname = new URL(url).pathname;
@@ -414,6 +432,11 @@ async function crawlWithPlaywright({
           canonical = url;
         }
 
+        if (isUrlExcluded(canonical, excludedPaths)) {
+          onProgress({ logLine: `Skipped (excluded folder): ${canonical}` });
+          continue;
+        }
+
         let addedIndex = 0;
         if (!pageUrls.has(canonical)) {
           pageUrls.add(canonical);
@@ -434,6 +457,7 @@ async function crawlWithPlaywright({
           pageUrls,
           queue,
           pageLimit,
+          excludedPaths,
         });
 
         onProgress({
@@ -471,6 +495,7 @@ async function crawlWithPlaywright({
 export async function crawlSite({
   rootUrl,
   maxPages = DEFAULT_MAX_PAGES,
+  excludedPaths = [],
   onProgress,
   getControl = () => 'run',
 }) {
@@ -489,6 +514,7 @@ export async function crawlSite({
     origin,
     rootHostname,
     robotsRules,
+    excludedPaths,
     onProgress,
     getControl,
   };

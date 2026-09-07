@@ -75,6 +75,11 @@ export default function ResultsPage() {
             <div className="label">pages skipped</div>
           </div>
         </div>
+        {job.excludedFolders?.length > 0 && (
+          <div className="excluded-summary">
+            <span className="label">Excluded:</span> {job.excludedFolders.join(', ')}
+          </div>
+        )}
       </div>
 
       <div className="panel panel-structure">

@@ -4,7 +4,7 @@ import { crawlSite } from './crawler.js';
 import { generateXmlSitemap } from './sitemapGenerator.js';
 import { generateUrlList } from './urlListGenerator.js';
 import { buildTree, generateHierarchyHtml } from './hierarchyGenerator.js';
-import { dedupePages } from './urlNormalize.js';
+import { dedupePages, isUrlExcluded, normalizeExclusionPath } from './urlNormalize.js';
 
 const router = Router();
 /** Soft safety ceiling for memory; not exposed as a restrictive UI limit. */
@@ -23,7 +23,7 @@ function isValidHttpUrl(value) {
 }
 
 router.post('/jobs', async (req, res) => {
-  const { url, maxPages } = req.body || {};
+  const { url, maxPages, excludedFolders } = req.body || {};
 
   if (!url || !isValidHttpUrl(url)) {
     return res.status(400).json({ error: 'Enter a valid URL, including http:// or https://.' });
@@ -40,10 +40,22 @@ router.post('/jobs', async (req, res) => {
     activeCrawlJobId = null;
   }
 
+  let rawExclusions = [];
+  if (Array.isArray(excludedFolders)) {
+    rawExclusions = excludedFolders;
+  } else if (typeof excludedFolders === 'string' && excludedFolders.trim()) {
+    rawExclusions = excludedFolders.split(/[\n,]+/);
+  }
+
+  const normalizedExclusions = rawExclusions
+    .map((item) => normalizeExclusionPath(item, url))
+    .filter(Boolean);
+  const uniqueExclusions = Array.from(new Set(normalizedExclusions));
+
   const requested = Number(maxPages);
   const resolvedMaxPages =
     Number.isFinite(requested) && requested > 0 ? Math.floor(requested) : DEFAULT_MAX_PAGES;
-  const job = createJob({ url, maxPages: resolvedMaxPages });
+  const job = createJob({ url, maxPages: resolvedMaxPages, excludedFolders: uniqueExclusions });
   activeCrawlJobId = job.id;
 
   res.status(201).json({ jobId: job.id });
@@ -66,6 +78,7 @@ async function runJob(jobId) {
     const { pages, errors, cancelled } = await crawlSite({
       rootUrl: job.url,
       maxPages: job.maxPages,
+      excludedPaths: job.excludedFolders || [],
       onProgress: (event) => emitProgress(jobId, event),
       getControl: () => getJob(jobId)?.control || 'cancel',
     });
@@ -86,7 +99,11 @@ async function runJob(jobId) {
 
     emitProgress(jobId, { patch: { status: 'generating' }, logLine: 'Generating sitemap files…' });
 
-    const uniquePages = dedupePages(pages);
+    // Guard against any URLs matching excluded folders
+    const filteredPages = (pages || []).filter(
+      (p) => !isUrlExcluded(p.url, job.excludedFolders || [])
+    );
+    const uniquePages = dedupePages(filteredPages);
     const sitemapXml = generateXmlSitemap(uniquePages);
     const urlListText = generateUrlList(uniquePages);
     const tree = buildTree(uniquePages, job.url);
@@ -162,6 +179,7 @@ router.get('/jobs/:id', (req, res) => {
   res.json({
     id: job.id,
     url: job.url,
+    excludedFolders: job.excludedFolders || [],
     status: job.status,
     pagesCrawled: job.pagesCrawled,
     pagesDiscovered: job.pagesDiscovered,

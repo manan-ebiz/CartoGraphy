@@ -7,12 +7,13 @@ const SSE_HEARTBEAT_MS = 15000; // keep proxies (e.g. Render) from closing idle 
 
 const jobs = new Map();
 
-export function createJob({ url, maxPages }) {
+export function createJob({ url, maxPages, excludedFolders = [] }) {
   const id = randomUUID();
   const job = {
     id,
     url,
     maxPages,
+    excludedFolders: Array.isArray(excludedFolders) ? excludedFolders : [],
     status: 'queued', // queued -> crawling -> paused -> generating -> done | error | cancelled
     control: 'run', // run | pause | cancel
     pagesCrawled: 0,
